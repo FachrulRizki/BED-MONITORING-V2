@@ -254,12 +254,12 @@
 
                 <div class="bed-details">
                     <div class="bed-item">
-                        <div class="bed-item-label">♂ Laki-laki</div>
+                        <div class="bed-item-label">♂ <br>Laki-laki</div>
                         <div class="bed-item-value">{{ $maleAvail }}</div>
                         <div class="bed-item-sub">tersedia / {{ $room['male_capacity'] }}</div>
                     </div>
                     <div class="bed-item">
-                        <div class="bed-item-label">♀ Perempuan</div>
+                        <div class="bed-item-label">♀ <br>Perempuan</div>
                         <div class="bed-item-value">{{ $femaleAvail }}</div>
                         <div class="bed-item-sub">tersedia / {{ $room['female_capacity'] }}</div>
                     </div>
