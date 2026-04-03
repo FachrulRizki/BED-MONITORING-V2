@@ -8,7 +8,8 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-if (config('aplicare.enabled')) {
-    Schedule::command('bed:sync-mjkn')
-        ->everyMinutes(config('aplicare.sync_interval', 5));
-}
+$interval = (int) config('aplicare.sync_interval', 5);
+
+Schedule::command('bed:sync-mjkn')
+    ->cron("*/{$interval} * * * *")
+    ->when(fn () => (bool) config('aplicare.enabled'));
