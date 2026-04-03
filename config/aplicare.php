@@ -30,4 +30,10 @@ return [
     'read_limit' => (int) env('APLICARE_READ_LIMIT', 100),
 
     'timeout' => (int) env('APLICARE_TIMEOUT', 20),
+
+    'connect_timeout' => (int) env('APLICARE_CONNECT_TIMEOUT', 10),
+
+    'force_ipv4' => (bool) env('APLICARE_FORCE_IPV4', true),
+
+    'user_agent' => env('APLICARE_USER_AGENT', 'BED-MONITORING-V2/1.0'),
 ];

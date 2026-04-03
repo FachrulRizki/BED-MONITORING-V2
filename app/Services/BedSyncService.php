@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Events\BedAvailabilityUpdated;
 use App\Models\Room;
+use CurlHandle;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -35,6 +36,9 @@ class BedSyncService
             $start     = max(1, (int) config('aplicare.read_start', 1));
             $limit     = max(1, (int) config('aplicare.read_limit', 100));
             $timeout   = max(5, (int) config('aplicare.timeout', 20));
+            $connectTimeout = max(3, (int) config('aplicare.connect_timeout', 10));
+            $forceIpv4 = (bool) config('aplicare.force_ipv4', true);
+            $userAgent = (string) config('aplicare.user_agent', 'BED-MONITORING-V2/1.0');
             $timestamp = now()->getTimestamp();
 
             if ($baseUrl === '' || $kodeppk === '' || blank($consid) || blank($secretkey) || blank($userkey)) {
@@ -44,16 +48,28 @@ class BedSyncService
             $signature = base64_encode(hash_hmac('sha256', $consid.'&'.$timestamp, $secretkey, true));
             $endpoint = "{$baseUrl}/rest/bed/read/{$kodeppk}/{$start}/{$limit}";
 
-            $response = Http::withHeaders([
+            $request = Http::withHeaders([
                 'X-cons-id'   => $consid,
                 'X-timestamp' => (string) $timestamp,
                 'X-signature' => $signature,
                 'user_key'    => $userkey,
                 'Accept'      => 'application/json',
             ])
+              ->withUserAgent($userAgent)
+              ->connectTimeout($connectTimeout)
               ->timeout($timeout)
-              ->retry(2, 500, throw: false)
-              ->get($endpoint)
+              ->retry(2, 1000, throw: false);
+
+            if ($forceIpv4 && defined('CURLOPT_IPRESOLVE') && defined('CURL_IPRESOLVE_V4') && defined('CURLOPT_HTTP_VERSION') && defined('CURL_HTTP_VERSION_1_1')) {
+                $request = $request->withOptions([
+                    'curl' => [
+                        CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
+                        CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+                    ],
+                ]);
+            }
+
+            $response = $request->get($endpoint)
               ->throw()
               ->json();
 
