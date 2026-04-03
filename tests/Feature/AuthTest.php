@@ -4,14 +4,13 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
-    private string $validEmail = 'admin@hospital.com';
+    private string $validUsername = 'admin';
     private string $validPassword = 'password';
 
     protected function setUp(): void
@@ -30,7 +29,7 @@ class AuthTest extends TestCase
     public function test_login_berhasil_dengan_kredensial_valid_redirect_ke_dashboard(): void
     {
         $response = $this->post('/login', [
-            'email'    => $this->validEmail,
+            'username' => $this->validUsername,
             'password' => $this->validPassword,
         ]);
 
@@ -41,18 +40,18 @@ class AuthTest extends TestCase
     public function test_login_gagal_dengan_kredensial_tidak_valid_mengembalikan_422(): void
     {
         $response = $this->post('/login', [
-            'email'    => $this->validEmail,
+            'username' => $this->validUsername,
             'password' => 'wrong-password',
         ]);
 
         $response->assertStatus(422);
-        $response->assertSessionHasErrors(['email']);
+        $response->assertSessionHasErrors(['username']);
         $this->assertGuest();
     }
 
     public function test_logout_menghapus_sesi_dan_redirect_ke_dashboard(): void
     {
-        $user = User::where('email', $this->validEmail)->first();
+        $user = User::where('username', $this->validUsername)->first();
 
         $response = $this->actingAs($user)->post('/logout');
 

@@ -1,27 +1,22 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('This is a secure area of the application. Please confirm your password before continuing.') }}
+    <div class="mb-8">
+        <x-ui.badge variant="warning">Konfirmasi</x-ui.badge>
+        <h2 class="mt-4 text-3xl font-bold text-foreground">Konfirmasi Password</h2>
+        <p class="mt-2 text-sm leading-6 text-secondary">Masukkan password Anda untuk melanjutkan ke tindakan yang memerlukan konfirmasi tambahan.</p>
     </div>
 
-    <form method="POST" action="{{ route('password.confirm') }}">
+    <form method="POST" action="{{ route('password.confirm') }}" class="space-y-5">
         @csrf
 
-        <!-- Password -->
-        <div>
-            <x-input-label for="password" :value="__('Password')" />
+        <x-ui.form-field label="Password" for="password" :error="$errors->first('password')" required>
+            <x-ui.input type="password" id="password" name="password" autocomplete="current-password" required />
+        </x-ui.form-field>
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="current-password" />
-
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
-
-        <div class="flex justify-end mt-4">
-            <x-primary-button>
-                {{ __('Confirm') }}
-            </x-primary-button>
+        <div class="flex justify-end pt-2">
+            <x-ui.button variant="primary" type="submit">
+                <i data-lucide="shield-check" class="size-4"></i>
+                Konfirmasi
+            </x-ui.button>
         </div>
     </form>
 </x-guest-layout>

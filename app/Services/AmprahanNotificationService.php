@@ -2,10 +2,10 @@
 
 namespace App\Services;
 
+use App\Events\AmprahanNotificationCreated;
 use App\Models\AmprahanReport;
 use App\Models\User;
 use App\Notifications\NewAmprahanNotification;
-use Illuminate\Support\Facades\Notification;
 
 class AmprahanNotificationService
 {
@@ -15,6 +15,11 @@ class AmprahanNotificationService
     public function notify(AmprahanReport $report): void
     {
         $users = User::all();
-        Notification::send($users, new NewAmprahanNotification($report));
+
+        foreach ($users as $user) {
+            $user->notify(new NewAmprahanNotification($report));
+
+            event(new AmprahanNotificationCreated($user, $report));
+        }
     }
 }

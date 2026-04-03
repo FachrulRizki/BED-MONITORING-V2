@@ -1,564 +1,410 @@
+@php
+    $appName = config('app.name', 'Hospital Bed Monitoring');
+    $title = trim($__env->yieldContent('title', $appName));
+    $pageTitle = trim($__env->yieldContent('page-title', $title));
+    $pageDescription = trim($__env->yieldContent('page-description', 'Kelola operasional monitoring bed rumah sakit secara real-time.'));
+    $user = auth()->user();
+    $userName = $user?->name ?? 'User';
+    $userRole = $user?->role ? ucfirst($user->role) : 'Petugas';
+    $userInitials = collect(preg_split('/\s+/', trim($userName)))
+        ->filter()
+        ->map(fn (string $part) => \Illuminate\Support\Str::upper(\Illuminate\Support\Str::substr($part, 0, 1)))
+        ->take(2)
+        ->implode('');
+    $userId = $user?->id;
+    $unreadNotifications = $user ? $user->unreadNotifications()->count() : 0;
+    $searchLinks = [
+        ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard'],
+        ['route' => 'amprahans.index', 'label' => 'Laporan Amprahan', 'icon' => 'clipboard-plus'],
+        ['route' => 'notifications.index', 'label' => 'Notifikasi', 'icon' => 'bell'],
+        ['route' => 'profile.edit', 'label' => 'Profil Saya', 'icon' => 'user-circle-2'],
+    ];
+
+    if ($user && $user->isAdmin()) {
+        array_splice($searchLinks, 1, 0, [
+            ['route' => 'rooms.index', 'label' => 'Manajemen Ruangan', 'icon' => 'bed-double'],
+            ['route' => 'users.index', 'label' => 'Manajemen Pengguna', 'icon' => 'users-round'],
+        ]);
+    }
+
+    $logoutFormId = 'sidebar-logout-form';
+    $logoutModalId = 'confirm-logout';
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>@yield('title', 'Hospital Bed Monitoring')</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f3f4f6; min-height: 100vh; }
-
-        /* Navbar */
-        .navbar {
-            background: #4f46e5;
-            color: #fff;
-            padding: 0 1.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            height: 56px;
-            box-shadow: 0 2px 6px rgba(0,0,0,.15);
-            position: relative;
-        }
-        .navbar-brand {
-            font-size: 1rem;
-            font-weight: 700;
-            color: #fff;
-            text-decoration: none;
-            letter-spacing: .02em;
-            flex-shrink: 0;
-        }
-        .navbar-nav {
-            display: flex;
-            align-items: center;
-            gap: .25rem;
-            list-style: none;
-        }
-        .nav-link {
-            color: rgba(255,255,255,.85);
-            text-decoration: none;
-            font-size: .875rem;
-            font-weight: 500;
-            padding: .4rem .75rem;
-            border-radius: 5px;
-            transition: background .15s, color .15s;
-            white-space: nowrap;
-        }
-        .nav-link:hover { background: rgba(255,255,255,.15); color: #fff; }
-        .nav-link.active { background: rgba(255,255,255,.2); color: #fff; }
-
-        /* Notification badge */
-        .badge {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: #ef4444;
-            color: #fff;
-            font-size: .65rem;
-            font-weight: 700;
-            min-width: 18px;
-            height: 18px;
-            border-radius: 9px;
-            padding: 0 4px;
-            margin-left: 4px;
-            vertical-align: middle;
-            line-height: 1;
-        }
-
-        /* Logout button */
-        .btn-logout {
-            background: rgba(255,255,255,.15);
-            color: #fff;
-            border: 1px solid rgba(255,255,255,.3);
-            font-size: .875rem;
-            font-weight: 500;
-            padding: .35rem .75rem;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background .15s;
-            white-space: nowrap;
-        }
-        .btn-logout:hover { background: rgba(255,255,255,.25); }
-
-        /* Hamburger button */
-        .navbar-toggler {
-            display: none;
-            background: none;
-            border: 1px solid rgba(255,255,255,.4);
-            border-radius: 5px;
-            padding: .35rem .5rem;
-            cursor: pointer;
-            flex-direction: column;
-            gap: 4px;
-            align-items: center;
-            justify-content: center;
-        }
-        .navbar-toggler span {
-            display: block;
-            width: 20px;
-            height: 2px;
-            background: #fff;
-            border-radius: 2px;
-            transition: transform .2s, opacity .2s;
-        }
-        .navbar-toggler[aria-expanded="true"] span:nth-child(1) {
-            transform: translateY(6px) rotate(45deg);
-        }
-        .navbar-toggler[aria-expanded="true"] span:nth-child(2) {
-            opacity: 0;
-        }
-        .navbar-toggler[aria-expanded="true"] span:nth-child(3) {
-            transform: translateY(-6px) rotate(-45deg);
-        }
-
-        /* Mobile nav */
-        @media (max-width: 768px) {
-            .navbar {
-                flex-wrap: wrap;
-                height: auto;
-                padding: .75rem 1rem;
-            }
-            .navbar-brand {
-                flex: 1;
-            }
-            .navbar-toggler {
-                display: flex;
-            }
-            .navbar-nav {
-                display: none;
-                flex-direction: column;
-                align-items: stretch;
-                width: 100%;
-                padding: .5rem 0 .25rem;
-                gap: .1rem;
-            }
-            .navbar-nav.open {
-                display: flex;
-            }
-            .navbar-nav li {
-                width: 100%;
-            }
-            .navbar-nav .nav-link {
-                display: block;
-                padding: .6rem .75rem;
-                border-radius: 5px;
-            }
-            .navbar-nav form {
-                display: block !important;
-                width: 100%;
-            }
-            .btn-logout {
-                display: block;
-                width: 100%;
-                text-align: left;
-                padding: .6rem .75rem;
-                border-radius: 5px;
-                border: none;
-                background: rgba(255,255,255,.1);
-            }
-            .btn-logout:hover { background: rgba(255,255,255,.2); }
-        }
-
-        /* Main content */
-        .main-content {
-            padding: 2rem 1rem;
-        }
-        .container {
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        /* Toast notification (simple, bottom-right) */
-        #toast-container {
-            position: fixed;
-            bottom: 1.5rem;
-            right: 1.5rem;
-            z-index: 9998;
-            display: flex;
-            flex-direction: column;
-            gap: .5rem;
-        }
-        .toast {
-            background: #1e1b4b;
-            color: #fff;
-            padding: .75rem 1.25rem;
-            border-radius: 8px;
-            font-size: .875rem;
-            box-shadow: 0 4px 12px rgba(0,0,0,.2);
-            max-width: 320px;
-            animation: slideIn .25s ease;
-        }
-        .toast strong { display: block; margin-bottom: .2rem; font-size: .9rem; }
-
-        /* Prominent notification popup (top-right) */
-        #notif-popup {
-            position: fixed;
-            top: 1.25rem;
-            right: 1.25rem;
-            z-index: 10000;
-            width: 340px;
-            background: #fff;
-            border-left: 5px solid #ef4444;
-            border-radius: 10px;
-            box-shadow: 0 8px 32px rgba(0,0,0,.22), 0 2px 8px rgba(239,68,68,.15);
-            padding: 1rem 1.25rem 1rem 1.1rem;
-            display: none;
-            animation: popupSlideIn .3s cubic-bezier(.22,1,.36,1);
-        }
-        #notif-popup.show { display: block; }
-        #notif-popup .popup-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            margin-bottom: .5rem;
-        }
-        #notif-popup .popup-title {
-            font-size: .95rem;
-            font-weight: 700;
-            color: #ef4444;
-            display: flex;
-            align-items: center;
-            gap: .4rem;
-        }
-        #notif-popup .popup-title .popup-icon {
-            font-size: 1.1rem;
-            animation: pulse 1s infinite;
-        }
-        #notif-popup .popup-close {
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #9ca3af;
-            font-size: 1.1rem;
-            line-height: 1;
-            padding: 0 .2rem;
-            transition: color .15s;
-        }
-        #notif-popup .popup-close:hover { color: #374151; }
-        #notif-popup .popup-body {
-            font-size: .875rem;
-            color: #374151;
-            line-height: 1.5;
-        }
-        #notif-popup .popup-room {
-            font-weight: 600;
-            color: #1e1b4b;
-            font-size: .95rem;
-        }
-        #notif-popup .popup-time {
-            color: #6b7280;
-            font-size: .8rem;
-            margin-top: .15rem;
-        }
-        #notif-popup .popup-link {
-            display: inline-block;
-            margin-top: .6rem;
-            font-size: .8rem;
-            color: #4f46e5;
-            text-decoration: none;
-            font-weight: 600;
-            border: 1px solid #4f46e5;
-            border-radius: 4px;
-            padding: .2rem .6rem;
-            transition: background .15s, color .15s;
-        }
-        #notif-popup .popup-link:hover { background: #4f46e5; color: #fff; }
-        #notif-popup .popup-progress {
-            height: 3px;
-            background: #ef4444;
-            border-radius: 2px;
-            margin-top: .75rem;
-            transform-origin: left;
-            animation: progressBar 6s linear forwards;
-        }
-        @keyframes popupSlideIn {
-            from { opacity: 0; transform: translateX(60px) scale(.95); }
-            to   { opacity: 1; transform: translateX(0) scale(1); }
-        }
-        @keyframes pulse {
-            0%, 100% { transform: scale(1); }
-            50%       { transform: scale(1.25); }
-        }
-        @keyframes progressBar {
-            from { transform: scaleX(1); }
-            to   { transform: scaleX(0); }
-        }
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(12px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-
-        @media (max-width: 480px) {
-            #notif-popup {
-                width: calc(100vw - 2rem);
-                right: 1rem;
-                top: 1rem;
-            }
-            .main-content {
-                padding: 1rem .75rem;
-            }
-        }
-    </style>
+    <title>{{ $title }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lexend+Deca:wght@100..900&display=swap" rel="stylesheet">
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    @stack('head')
 </head>
-<body>
+<body class="min-h-screen overflow-x-hidden bg-white font-sans text-foreground">
+    <div id="sidebar-overlay" class="fixed inset-0 z-40 hidden bg-black/80 lg:hidden" onclick="toggleSidebar()"></div>
 
-    {{-- Navbar --}}
-    <nav class="navbar">
-        <a href="{{ route('monitor.index') }}" class="navbar-brand">🏥 Hospital Bed Monitoring</a>
+    <div class="flex h-screen max-w-full overflow-hidden bg-muted">
+        <aside id="sidebar" class="fixed left-0 z-50 flex h-screen w-[280px] -translate-x-full flex-col border-r border-border bg-white transition-transform duration-300 lg:translate-x-0">
+            <div class="flex h-[90px] items-center gap-3 border-b border-border px-6">
+                <div class="flex size-10 items-center justify-center rounded-xl bg-primary shadow-lg shadow-primary/20">
+                    <i data-lucide="cross" class="size-5 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-xl font-bold tracking-tight">BedMonitor</h1>
+                    <p class="text-xs text-secondary">Dashboard Rumah Sakit</p>
+                </div>
+            </div>
 
-        <button class="navbar-toggler" id="navbar-toggler" aria-expanded="false" aria-label="Toggle navigasi">
-            <span></span>
-            <span></span>
-            <span></span>
-        </button>
+            <nav class="scrollbar-hide flex flex-1 flex-col gap-6 overflow-y-auto p-5">
+                <div>
+                    <h3 class="mb-4 px-2 text-xs font-bold uppercase tracking-wider text-secondary">Menu Utama</h3>
+                    <div class="flex flex-col gap-1">
+                        <a href="{{ route('dashboard') }}" class="{{ request()->routeIs('dashboard') ? 'bg-primary/10 text-primary font-semibold' : 'text-secondary hover:bg-muted font-medium' }} flex items-center gap-3 rounded-xl p-3.5 transition-all">
+                            <i data-lucide="layout-dashboard" class="size-5"></i>
+                            <span>Dashboard</span>
+                        </a>
 
-        <ul class="navbar-nav" id="navbar-nav">
-            @auth
-                <li>
-                    <a href="{{ route('dashboard') }}"
-                       class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                        Dashboard
-                    </a>
-                </li>
-                @if(auth()->check() && auth()->user()->role === 'admin')
-                <li>
-                    <a href="{{ route('rooms.index') }}"
-                       class="nav-link {{ request()->routeIs('rooms.*') ? 'active' : '' }}">
-                        Ruangan
-                    </a>
-                </li>
-                @endif
-                <li>
-                    <a href="{{ route('amprahans.index') }}"
-                       class="nav-link {{ request()->routeIs('amprahans.*') ? 'active' : '' }}">
-                        Amprahan
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ route('notifications.index') }}"
-                       class="nav-link {{ request()->routeIs('notifications.*') ? 'active' : '' }}"
-                       id="notif-nav-link">
-                        Notifikasi
-                        @php $unreadCount = auth()->user()->unreadNotifications()->count(); @endphp
-                        @if($unreadCount > 0)
-                            <span class="badge" id="notif-badge">{{ $unreadCount }}</span>
-                        @else
-                            <span class="badge" id="notif-badge" style="display:none;">0</span>
+                        @if ($user && $user->isAdmin())
+                            <a href="{{ route('rooms.index') }}" class="{{ request()->routeIs('rooms.*') ? 'bg-primary/10 text-primary font-semibold' : 'text-secondary hover:bg-muted font-medium' }} flex items-center gap-3 rounded-xl p-3.5 transition-all">
+                                <i data-lucide="bed-double" class="size-5"></i>
+                                <span>Manajemen Ruangan</span>
+                            </a>
+
+                            <a href="{{ route('users.index') }}" class="{{ request()->routeIs('users.*') ? 'bg-primary/10 text-primary font-semibold' : 'text-secondary hover:bg-muted font-medium' }} flex items-center gap-3 rounded-xl p-3.5 transition-all">
+                                <i data-lucide="users-round" class="size-5"></i>
+                                <span>Manajemen Pengguna</span>
+                            </a>
                         @endif
-                    </a>
-                </li>
-                <li>
-                    <a href="{{ route('profile.edit') }}"
-                       class="nav-link {{ request()->routeIs('profile.*') ? 'active' : '' }}">
-                        Profile
-                    </a>
-                </li>
-                <li>
-                    <form action="{{ route('logout') }}" method="POST" style="display:inline;">
+
+                        <a href="{{ route('amprahans.index') }}" class="{{ request()->routeIs('amprahans.*') ? 'bg-primary/10 text-primary font-semibold' : 'text-secondary hover:bg-muted font-medium' }} flex items-center gap-3 rounded-xl p-3.5 transition-all">
+                            <i data-lucide="clipboard-plus" class="size-5"></i>
+                            <span>Laporan Amprahan</span>
+                        </a>
+
+                        <a href="{{ route('notifications.index') }}" class="{{ request()->routeIs('notifications.*') ? 'bg-primary/10 text-primary font-semibold' : 'text-secondary hover:bg-muted font-medium' }} flex items-center gap-3 rounded-xl p-3.5 transition-all">
+                            <i data-lucide="bell" class="size-5"></i>
+                            <span>Notifikasi</span>
+                            <x-ui.badge
+                                variant="danger"
+                                size="sm"
+                                class="ml-auto {{ $unreadNotifications > 0 ? '' : 'hidden' }}"
+                                data-unread-badge
+                                data-count="{{ $unreadNotifications }}"
+                            >{{ $unreadNotifications }}</x-ui.badge>
+                        </a>
+                    </div>
+                </div>
+
+                <div>
+                    <h3 class="mb-4 px-2 text-xs font-bold uppercase tracking-wider text-secondary">Akun</h3>
+                    <div class="flex flex-col gap-1">
+                        <a href="{{ route('profile.edit') }}" class="{{ request()->routeIs('profile.*') ? 'bg-primary/10 text-primary font-semibold' : 'text-secondary hover:bg-muted font-medium' }} flex items-center gap-3 rounded-xl p-3.5 transition-all">
+                            <i data-lucide="user-circle-2" class="size-5"></i>
+                            <span>Profil Saya</span>
+                        </a>
+
+                        <a href="{{ route('monitor.index') }}" class="flex items-center gap-3 rounded-xl p-3.5 font-medium text-secondary transition-all hover:bg-muted">
+                            <i data-lucide="monitor-play" class="size-5"></i>
+                            <span>Monitor Publik</span>
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-auto rounded-3xl bg-primary p-5 text-white shadow-xl shadow-primary/20">
+                    <div class="flex items-center gap-3">
+                        <div class="flex size-12 items-center justify-center rounded-2xl bg-white/15 text-sm font-bold">
+                            {{ $userInitials }}
+                        </div>
+                        <div class="min-w-0">
+                            <p class="truncate text-sm font-bold">{{ $userName }}</p>
+                            <p class="truncate text-xs text-white/75">{{ $userRole }}</p>
+                        </div>
+                    </div>
+
+                    <form id="{{ $logoutFormId }}" method="POST" action="{{ route('logout') }}" class="hidden">
                         @csrf
-                        <button type="submit" class="btn-logout">Logout</button>
                     </form>
-                </li>
-            @else
-                <li>
-                    <a href="{{ route('login') }}" class="nav-link {{ request()->routeIs('login') ? 'active' : '' }}">
-                        Login Petugas
+
+                    <button type="button" onclick="openModal('{{ $logoutModalId }}')" class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-semibold text-white transition-all hover:bg-white/20">
+                        <i data-lucide="log-out" class="size-4"></i>
+                        Logout
+                    </button>
+                </div>
+            </nav>
+        </aside>
+
+        <main class="relative flex min-h-screen min-w-0 flex-1 flex-col bg-white lg:ml-[280px]">
+            <header class="sticky top-0 z-30 flex min-h-[76px] items-center justify-between gap-3 border-b border-border bg-white px-4 py-3 md:h-[90px] md:px-8 md:py-0">
+                <div class="flex min-w-0 flex-1 items-center gap-3 md:gap-4">
+                    <button type="button" onclick="toggleSidebar()" class="flex size-10 items-center justify-center rounded-xl bg-muted text-secondary transition-colors hover:bg-primary/10 hover:text-primary lg:hidden">
+                        <i data-lucide="menu" class="size-5"></i>
+                    </button>
+                    <div class="min-w-0 flex-1">
+                        <h2 class="max-w-full break-words text-base font-bold leading-tight text-foreground sm:text-lg md:text-2xl">{{ $pageTitle }}</h2>
+                        <p class="hidden text-sm text-secondary md:block">{{ $pageDescription }}</p>
+                    </div>
+                </div>
+
+                <div class="shrink-0 flex items-center gap-2 md:gap-3">
+                    <x-ui.button variant="ghost" size="icon" onclick="openModal('global-search-modal')" aria-label="Buka pencarian">
+                        <i data-lucide="search" class="size-5"></i>
+                    </x-ui.button>
+
+                    <x-ui.button href="{{ route('notifications.index') }}" variant="ghost" size="icon" class="relative" aria-label="Buka notifikasi">
+                        <i data-lucide="bell" class="size-5"></i>
+                        <span class="absolute right-2 top-2 size-2 rounded-full bg-error {{ $unreadNotifications > 0 ? '' : 'hidden' }}" data-unread-dot></span>
+                    </x-ui.button>
+
+                    <div class="hidden items-center gap-3 border-l border-border pl-4 md:flex">
+                        <div class="text-right">
+                            <p class="text-sm font-bold">{{ $userName }}</p>
+                            <p class="text-xs text-secondary">{{ $userRole }}</p>
+                        </div>
+                        <div class="flex size-10 items-center justify-center rounded-full bg-primary/10 font-bold text-primary">
+                            {{ $userInitials }}
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <div class="flex-1 min-w-0 overflow-y-auto overflow-x-hidden bg-muted/30 p-4 md:p-8">
+                @if (session('success'))
+                    <x-ui.alert variant="success">{{ session('success') }}</x-ui.alert>
+                @endif
+
+                @if (session('status') && !in_array(session('status'), ['profile-updated', 'password-updated'], true))
+                    <x-ui.alert variant="info">{{ session('status') }}</x-ui.alert>
+                @endif
+
+                @hasSection('content')
+                    @yield('content')
+                @elseif (isset($slot))
+                    {{ $slot }}
+                @endif
+            </div>
+        </main>
+    </div>
+
+    <x-ui.confirm-modal
+        :name="$logoutModalId"
+        title="Logout dari sistem?"
+        message="Sesi Anda akan diakhiri dan Anda akan kembali ke halaman login."
+        :form-id="$logoutFormId"
+        confirm-label="Ya, Logout"
+        variant="danger"
+    />
+
+    <div id="toast-container" class="fixed bottom-4 right-4 z-[150] flex max-w-sm flex-col gap-3"></div>
+
+    <div id="global-search-modal" data-ui-modal class="fixed inset-0 z-[100] hidden items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-2xl overflow-hidden rounded-[28px] border border-border bg-white shadow-2xl">
+            <div class="flex items-center gap-3 border-b border-border px-5 py-4">
+                <i data-lucide="search" class="size-5 text-secondary"></i>
+                <input id="global-search-input" type="text" placeholder="Cari menu atau halaman..." class="flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-secondary/70">
+                <button type="button" class="rounded-lg border border-border bg-white px-2 py-1 text-xs font-bold text-secondary" data-modal-close>ESC</button>
+            </div>
+            <div id="global-search-results" class="max-h-[360px] overflow-y-auto p-4">
+                @foreach ($searchLinks as $searchLink)
+                    <a href="{{ route($searchLink['route']) }}" data-search-item data-search-label="{{ \Illuminate\Support\Str::lower($searchLink['label']) }}" class="flex items-center gap-3 rounded-2xl p-3 transition-all hover:bg-muted">
+                        <div class="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                            <i data-lucide="{{ $searchLink['icon'] }}" class="size-5"></i>
+                        </div>
+                        <div>
+                            <p class="text-sm font-semibold text-foreground">{{ $searchLink['label'] }}</p>
+                            <p class="text-xs text-secondary">Buka halaman {{ \Illuminate\Support\Str::lower($searchLink['label']) }}</p>
+                        </div>
                     </a>
-                </li>
-            @endauth
-        </ul>
-    </nav>
-
-    {{-- Page Content --}}
-    <div class="main-content">
-        <div class="container">
-            @yield('content')
+                @endforeach
+            </div>
         </div>
     </div>
 
-    {{-- Toast container --}}
-    <div id="toast-container"></div>
+    @stack('modals')
 
-    {{-- Prominent notification popup --}}
-    <div id="notif-popup" role="alert" aria-live="assertive">
-        <div class="popup-header">
-            <span class="popup-title">
-                <span class="popup-icon">🔔</span>
-                Laporan Amprahan Baru
-            </span>
-            <button class="popup-close" id="notif-popup-close" aria-label="Tutup">&times;</button>
-        </div>
-        <div class="popup-body">
-            <div class="popup-room" id="notif-popup-room"></div>
-            <div class="popup-time" id="notif-popup-time"></div>
-            <a href="#" class="popup-link" id="notif-popup-link">Lihat Laporan &rarr;</a>
-        </div>
-        <div class="popup-progress" id="notif-popup-progress"></div>
-    </div>
+    @if ($userId)
+        <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+        <script>
+            function playNotificationSound() {
+                const AudioContextClass = window.AudioContext || window.webkitAudioContext;
 
-    {{-- Hamburger toggle script --}}
-    <script>
-        (function () {
-            var toggler = document.getElementById('navbar-toggler');
-            var nav     = document.getElementById('navbar-nav');
-            if (!toggler || !nav) return;
-            toggler.addEventListener('click', function () {
-                var isOpen = nav.classList.toggle('open');
-                toggler.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-            });
-        })();
-    </script>
+                if (!AudioContextClass) {
+                    return;
+                }
 
-    {{-- Pusher JS --}}
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+                const audioContext = new AudioContextClass();
 
-    {{-- Laravel Echo + Pusher configuration --}}
-    <script>
-        const PUSHER_KEY     = '{{ config('broadcasting.connections.pusher.key') }}';
-        const PUSHER_CLUSTER = '{{ config('broadcasting.connections.pusher.options.cluster', 'mt1') }}';
-        const PUSHER_HOST    = '{{ config('broadcasting.connections.pusher.host', '') }}';
-        const PUSHER_PORT    = {{ config('broadcasting.connections.pusher.port', 443) }};
-        const PUSHER_SCHEME  = '{{ config('broadcasting.connections.pusher.scheme', 'https') }}';
-        const CSRF_TOKEN     = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume().catch(() => {});
+                }
 
-        @auth
-        const AUTH_USER_ID   = {{ auth()->id() }};
-        @endauth
+                const notes = [
+                    { frequency: 880, start: 0, duration: 0.09 },
+                    { frequency: 1174, start: 0.12, duration: 0.12 },
+                ];
 
-        // Helper: show simple toast (bottom-right)
-        function showToast(title, message) {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            toast.innerHTML = '<strong>' + title + '</strong>' + (message || '');
-            container.appendChild(toast);
-            setTimeout(function() {
-                toast.style.opacity = '0';
-                toast.style.transition = 'opacity .3s';
-                setTimeout(function() { toast.remove(); }, 300);
-            }, 5000);
-        }
+                notes.forEach((note) => {
+                    const oscillator = audioContext.createOscillator();
+                    const gainNode = audioContext.createGain();
 
-        // Helper: show prominent popup notification (top-right)
-        var _popupDismissTimer = null;
-        function showPopupNotification(roomName, reportTime, link) {
-            var popup    = document.getElementById('notif-popup');
-            var roomEl   = document.getElementById('notif-popup-room');
-            var timeEl   = document.getElementById('notif-popup-time');
-            var linkEl   = document.getElementById('notif-popup-link');
-            var progress = document.getElementById('notif-popup-progress');
+                    oscillator.type = 'sine';
+                    oscillator.frequency.setValueAtTime(note.frequency, audioContext.currentTime + note.start);
 
-            roomEl.textContent = roomName || 'Ruangan';
-            timeEl.textContent = reportTime ? 'Jam: ' + reportTime : '';
-            if (link) {
-                linkEl.href = link;
-                linkEl.style.display = '';
-            } else {
-                linkEl.style.display = 'none';
+                    gainNode.gain.setValueAtTime(0.0001, audioContext.currentTime + note.start);
+                    gainNode.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + note.start + 0.01);
+                    gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + note.start + note.duration);
+
+                    oscillator.connect(gainNode);
+                    gainNode.connect(audioContext.destination);
+
+                    oscillator.start(audioContext.currentTime + note.start);
+                    oscillator.stop(audioContext.currentTime + note.start + note.duration);
+                });
+
+                window.setTimeout(() => audioContext.close().catch(() => {}), 800);
             }
 
-            // Reset progress bar animation
-            progress.style.animation = 'none';
-            void progress.offsetWidth; // force reflow
-            progress.style.animation = '';
+            document.addEventListener('DOMContentLoaded', () => {
+                const pusherKey = @js(config('broadcasting.connections.pusher.key'));
+                const pusherCluster = @js(config('broadcasting.connections.pusher.options.cluster'));
+                const pusherHost = @js(config('broadcasting.connections.pusher.host'));
+                const pusherPort = @js(config('broadcasting.connections.pusher.port'));
+                const pusherScheme = @js(config('broadcasting.connections.pusher.scheme'));
+                const userId = {{ $userId }};
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
-            popup.classList.add('show');
+                if (!pusherKey || pusherKey === 'your-pusher-app-key') {
+                    return;
+                }
 
-            if (_popupDismissTimer) clearTimeout(_popupDismissTimer);
-            _popupDismissTimer = setTimeout(function() { dismissPopup(); }, 6000);
+                const pusher = new Pusher(pusherKey, {
+                    cluster: pusherCluster || 'mt1',
+                    wsHost: pusherHost || undefined,
+                    wsPort: pusherPort || undefined,
+                    wssPort: pusherPort || undefined,
+                    forceTLS: pusherScheme === 'https',
+                    authEndpoint: '/broadcasting/auth',
+                    auth: {
+                        headers: {
+                            'X-CSRF-TOKEN': csrfToken,
+                        }
+                    }
+                });
+
+                const channel = pusher.subscribe('private-notifications.' + userId);
+
+                function updateUnreadIndicators() {
+                    document.querySelectorAll('[data-unread-badge]').forEach((element) => {
+                        const currentCount = Number(element.dataset.count || element.textContent || 0) + 1;
+                        element.dataset.count = String(currentCount);
+                        element.textContent = String(currentCount);
+                        element.classList.remove('hidden');
+                    });
+
+                    document.querySelectorAll('[data-unread-dot]').forEach((element) => {
+                        element.classList.remove('hidden');
+                    });
+                }
+
+                function handleNotification(data) {
+                    if (!data) return;
+
+                    showAppToast('Laporan baru: ' + (data.room_name || '-') + ' · Jam ' + (data.report_time || '-'), 'primary');
+                    playNotificationSound();
+                    updateUnreadIndicators();
+                }
+
+                channel.bind('amprahan.notification.created', handleNotification);
+            });
+        </script>
+    @endif
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebar-overlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
         }
 
-        function dismissPopup() {
-            var popup = document.getElementById('notif-popup');
-            popup.style.opacity = '0';
-            popup.style.transition = 'opacity .3s';
-            setTimeout(function() {
-                popup.classList.remove('show');
-                popup.style.opacity = '';
-                popup.style.transition = '';
-            }, 300);
+        function openModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.add('is-open');
+            const input = modal.querySelector('input, textarea, select');
+            if (input) {
+                setTimeout(() => input.focus(), 20);
+            }
         }
 
-        document.getElementById('notif-popup-close').addEventListener('click', function() {
-            if (_popupDismissTimer) clearTimeout(_popupDismissTimer);
-            dismissPopup();
+        function closeModal(id) {
+            const modal = document.getElementById(id);
+            if (!modal) return;
+            modal.classList.remove('is-open');
+        }
+
+        function showAppToast(message, variant = 'primary') {
+            const palette = {
+                primary: 'bg-primary',
+                success: 'bg-success',
+                danger: 'bg-error',
+                warning: 'bg-warning text-foreground',
+            };
+            const toast = document.createElement('div');
+            toast.className = `translate-y-20 opacity-0 transform rounded-2xl px-5 py-3 text-sm font-medium text-white shadow-xl transition-all duration-300 ${palette[variant] || palette.primary}`;
+            toast.textContent = message;
+
+            const container = document.getElementById('toast-container');
+            container.appendChild(toast);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-y-20', 'opacity-0');
+            });
+
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3500);
+        }
+
+        document.addEventListener('click', (event) => {
+            const closeTrigger = event.target.closest('[data-modal-close]');
+            if (closeTrigger) {
+                const modal = closeTrigger.closest('[data-ui-modal]');
+                if (modal) closeModal(modal.id);
+            }
+
+            const backdrop = event.target.closest('[data-ui-modal]');
+            if (backdrop && event.target === backdrop) {
+                closeModal(backdrop.id);
+            }
         });
 
-        // Helper: play alert sound via Web Audio API
-        function playAlertSound() {
-            try {
-                var ctx = new (window.AudioContext || window.webkitAudioContext)();
-                var oscillator = ctx.createOscillator();
-                var gainNode = ctx.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(ctx.destination);
-                oscillator.frequency.value = 880;
-                oscillator.type = 'sine';
-                gainNode.gain.setValueAtTime(0.4, ctx.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-                oscillator.start();
-                oscillator.stop(ctx.currentTime + 0.4);
-            } catch (e) {
-                // fallback: silent if Web Audio API unavailable
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                document.querySelectorAll('[data-ui-modal].is-open').forEach((modal) => closeModal(modal.id));
             }
-        }
+        });
 
-        // Helper: increment notification badge
-        function incrementNotifBadge() {
-            var badge = document.getElementById('notif-badge');
-            if (!badge) return;
-            var current = parseInt(badge.textContent) || 0;
-            badge.textContent = current + 1;
-            badge.style.display = '';
-        }
-
-        if (PUSHER_KEY && PUSHER_KEY !== 'your-pusher-app-key') {
-            var pusherOptions = {
-                cluster: PUSHER_CLUSTER || 'mt1',
-            };
-
-            // Support Laravel Reverb (self-hosted) via custom host
-            if (PUSHER_HOST && PUSHER_HOST !== '') {
-                pusherOptions.wsHost       = PUSHER_HOST;
-                pusherOptions.wsPort       = PUSHER_PORT;
-                pusherOptions.wssPort      = PUSHER_PORT;
-                pusherOptions.forceTLS     = PUSHER_SCHEME === 'https';
-                pusherOptions.enabledTransports = ['ws', 'wss'];
-                pusherOptions.disableStats = true;
+        document.addEventListener('DOMContentLoaded', () => {
+            if (window.lucide) {
+                window.lucide.createIcons();
             }
 
-            var pusher = new Pusher(PUSHER_KEY, pusherOptions);
-
-            // Subscribe to public bed-availability channel on all pages
-            var bedChannel = pusher.subscribe('bed-availability');
-            bedChannel.bind('BedAvailabilityUpdated', function(data) {
-                if (typeof window.onBedAvailabilityUpdated === 'function') {
-                    window.onBedAvailabilityUpdated(data);
-                }
-            });
-
-            @auth
-            // Subscribe to private notifications channel for logged-in users
-            pusher.config.authEndpoint = '/broadcasting/auth';
-            pusher.config.auth = {
-                headers: { 'X-CSRF-TOKEN': CSRF_TOKEN }
-            };
-
-            var notifChannel = pusher.subscribe('private-notifications.' + AUTH_USER_ID);
-            notifChannel.bind('Illuminate\\Notifications\\Events\\BroadcastNotificationCreated', function(data) {
-                var roomName   = data.room_name   || 'Ruangan';
-                var reportTime = data.report_time || '';
-                var link       = data.link        || '';
-                showPopupNotification(roomName, reportTime, link);
-                playAlertSound();
-                incrementNotifBadge();
-            });
-            @endauth
-        }
+            const searchInput = document.getElementById('global-search-input');
+            if (searchInput) {
+                searchInput.addEventListener('input', () => {
+                    const value = searchInput.value.trim().toLowerCase();
+                    document.querySelectorAll('[data-search-item]').forEach((item) => {
+                        item.classList.toggle('hidden', !item.dataset.searchLabel.includes(value));
+                    });
+                });
+            }
+        });
     </script>
-
-    @yield('scripts')
-
+    @stack('scripts')
 </body>
 </html>

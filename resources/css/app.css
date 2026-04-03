@@ -1,3 +1,42 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    :root {
+        --color-primary: 25 135 84;
+        --color-primary-hover: 21 115 71;
+        --color-foreground: 15 23 42;
+        --color-secondary: 106 118 134;
+        --color-muted: 239 242 247;
+        --color-border: 238 242 238;
+        --color-card-grey: 241 245 241;
+        --color-success: 48 178 45;
+        --color-error: 237 107 96;
+        --color-warning: 212 168 10;
+    }
+
+    html {
+        font-family: 'Lexend Deca', sans-serif;
+        overflow-x: hidden;
+    }
+
+    body {
+        @apply overflow-x-hidden bg-white text-foreground antialiased;
+    }
+}
+
+@layer components {
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    [data-ui-modal].is-open {
+        display: flex;
+    }
+}

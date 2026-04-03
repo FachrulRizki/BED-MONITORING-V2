@@ -1,59 +1,127 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# BED-MONITORING-V2
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi Laravel untuk monitoring ketersediaan bed rumah sakit, laporan amprahan per shift, notifikasi realtime, dan manajemen pengguna admin.
 
-## About Laravel
+## Fitur
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Login memakai `username` dan `password`
+- Dashboard internal dengan ringkasan okupansi, laporan terbaru, dan notifikasi
+- Monitor publik ketersediaan bed secara realtime
+- Laporan amprahan dengan:
+  - shift saat ini dan shift berikutnya
+  - petugas shift saat ini dan petugas shift berikutnya
+  - jam amprahan format 24 jam
+  - gambar wajib
+  - `rencana_tindakan` opsional
+- Cetak laporan amprahan dengan filter rentang tanggal
+- Notifikasi realtime Pusher untuk admin/pengguna login
+- Bunyi notifikasi di browser saat laporan baru masuk
+- Manajemen ruangan untuk admin
+- Manajemen pengguna untuk admin
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Stack
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- PHP 8.2+
+- Laravel 12
+- MySQL / MariaDB / SQLite
+- Vite
+- Tailwind CSS
+- Pusher
 
-## Learning Laravel
+## Setup
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+1. Install dependency backend:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```bash
+composer install
+```
 
-## Laravel Sponsors
+2. Install dependency frontend:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+npm install
+```
 
-### Premium Partners
+3. Buat file environment:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```bash
+cp .env.example .env
+php artisan key:generate
+```
 
-## Contributing
+4. Atur koneksi database di `.env`.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+5. Jalankan migrasi dan seeder:
 
-## Code of Conduct
+```bash
+php artisan migrate
+php artisan db:seed
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+6. Build asset frontend:
 
-## Security Vulnerabilities
+```bash
+npm run build
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+7. Jalankan aplikasi:
 
-## License
+```bash
+php artisan serve
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Untuk development frontend:
+
+```bash
+npm run dev
+```
+
+## Akun Default
+
+Seeder membuat 2 akun awal:
+
+- Admin
+  - username: `admin`
+  - password: `password`
+- Petugas
+  - username: `petugas`
+  - password: `password`
+
+## Realtime Pusher
+
+Aplikasi memakai Pusher untuk:
+
+- update monitor bed
+- badge notifikasi
+- toast notifikasi
+- bunyi notifikasi browser
+
+Pastikan `.env` berisi konfigurasi berikut:
+
+```env
+BROADCAST_CONNECTION=pusher
+PUSHER_APP_ID=your-app-id
+PUSHER_APP_KEY=your-app-key
+PUSHER_APP_SECRET=your-app-secret
+PUSHER_APP_CLUSTER=ap1
+PUSHER_HOST=
+PUSHER_PORT=443
+PUSHER_SCHEME=https
+```
+
+## Testing
+
+Jalankan test:
+
+```bash
+php artisan test
+```
+
+- Jalankan `php artisan migrate --force` di server setelah update schema
+- Jalankan `npm run build` lalu deploy folder `public/build`
+- Pastikan kredensial Pusher valid di server production
+- Jika memakai shared hosting, pastikan websocket/broadcast client ke Pusher tidak diblokir
+
+## Lisensi
+
+Proyek ini mengikuti lisensi MIT, mengikuti basis Laravel yang digunakan.

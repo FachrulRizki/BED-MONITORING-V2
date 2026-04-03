@@ -21,6 +21,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'username',
         'email',
         'password',
         'role',
@@ -57,5 +58,10 @@ class User extends Authenticatable
     public function amprahanReports(): HasMany
     {
         return $this->hasMany(AmprahanReport::class, 'submitted_by');
+    }
+
+    public function receivesBroadcastNotificationsOn(): string
+    {
+        return 'notifications.'.$this->id;
     }
 }

@@ -7,16 +7,20 @@ use App\Http\Controllers\MonitorController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\RoomController;
+use App\Http\Controllers\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', [MonitorController::class, 'index'])->name('monitor.index');
 
 // Auth routes
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+});
 
 Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
     Route::get('/dashboard', [AuthDashboardController::class, 'index'])->name('dashboard');
 
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
@@ -24,9 +28,11 @@ Route::middleware('auth')->group(function () {
     Route::put('/profile/password', [ProfileController::class, 'updatePassword'])->name('profile.password.update');
 
     Route::resource('rooms', RoomController::class)->middleware('admin');
+    Route::resource('users', UserController::class)->except('show')->middleware('admin');
 
     Route::get('/amprahans', [AmprahanController::class, 'index'])->name('amprahans.index');
     Route::get('/amprahans/create', [AmprahanController::class, 'create'])->name('amprahans.create');
+    Route::get('/amprahans/print', [AmprahanController::class, 'print'])->name('amprahans.print');
     Route::post('/amprahans', [AmprahanController::class, 'store'])->name('amprahans.store');
     Route::get('/amprahans/{amprahan}', [AmprahanController::class, 'show'])->name('amprahans.show');
 

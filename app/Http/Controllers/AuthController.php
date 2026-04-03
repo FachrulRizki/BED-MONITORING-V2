@@ -14,20 +14,23 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->validate([
-            'email'    => ['required', 'email'],
+        $validated = $request->validate([
+            'username' => ['required', 'string'],
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($credentials)) {
+        if (Auth::attempt([
+            'username' => $validated['username'],
+            'password' => $validated['password'],
+        ])) {
             $request->session()->regenerate();
 
             return redirect('/dashboard');
         }
 
         return back()
-            ->withInput($request->only('email'))
-            ->withErrors(['email' => 'Email atau password salah'])
+            ->withInput($request->only('username'))
+            ->withErrors(['username' => 'Username atau password salah'])
             ->setStatusCode(422);
     }
 

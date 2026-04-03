@@ -16,7 +16,10 @@ class AmprahanReport extends Model
         'image_path',
         'report_time',
         'shift',
+        'next_shift',
         'officer_name',
+        'next_officer_name',
+        'action_plan',
         'male_patient_count',
         'female_patient_count',
     ];

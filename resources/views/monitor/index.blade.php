@@ -1,364 +1,130 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+@extends('layouts.public')
+
+@section('title', 'Monitor Ketersediaan Bed')
+@section('header-class', 'flex w-full flex-col gap-4 px-4 py-4 sm:px-6 lg:flex-row lg:items-center lg:justify-between lg:px-8 lg:py-5')
+@section('main-class', 'w-full min-w-0 px-4 py-6 sm:px-6 lg:px-8')
+
+@push('meta')
     <meta http-equiv="refresh" content="30">
-    <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Monitor Ketersediaan Bed — Hospital Bed Monitoring</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+@endpush
 
-        body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            background: #0f172a;
-            color: #f1f5f9;
-            min-height: 100vh;
-        }
+@section('content')
+@php
+    $totalRooms = $rooms->count();
+    $totalCapacity = $rooms->sum(fn ($room) => $room['male_capacity'] + $room['female_capacity']);
+    $totalOccupied = $rooms->sum(fn ($room) => $room['male_occupied'] + $room['female_occupied']);
+    $totalAvailable = $totalCapacity - $totalOccupied;
+@endphp
 
-        /* Header */
-        .header {
-            background: #1e293b;
-            border-bottom: 2px solid #334155;
-            padding: 1.25rem 2rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-        .header-title {
-            font-size: 1.75rem;
-            font-weight: 800;
-            letter-spacing: .03em;
-            color: #f8fafc;
-        }
-        .header-title span {
-            color: #38bdf8;
-        }
-        .header-meta {
-            font-size: 1rem;
-            color: #94a3b8;
-            text-align: right;
-        }
-        .header-meta .clock {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: #e2e8f0;
-            display: block;
-        }
-
-        /* Login link */
-        .login-link {
-            display: inline-block;
-            margin-top: .4rem;
-            font-size: .85rem;
-            color: #64748b;
-            text-decoration: none;
-            transition: color .15s;
-        }
-        .login-link:hover { color: #94a3b8; }
-
-        /* Grid */
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-            gap: 1.5rem;
-            padding: 2rem;
-        }
-
-        /* Room card */
-        .card {
-            border-radius: 16px;
-            padding: 1.75rem 2rem;
-            position: relative;
-            overflow: hidden;
-            transition: transform .2s;
-            color: #ffffff;
-        }
-        .card:hover { transform: translateY(-3px); }
-
-        .card.green {
-            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
-            border: 2px solid #10b981;
-            box-shadow: 0 0 24px rgba(16, 185, 129, .25);
-        }
-        .card.red {
-            background: linear-gradient(135deg, #450a0a 0%, #7f1d1d 100%);
-            border: 2px solid #ef4444;
-            box-shadow: 0 0 24px rgba(239, 68, 68, .25);
-        }
-
-        /* Status indicator dot */
-        .status-dot {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: .5rem;
-            vertical-align: middle;
-            animation: pulse-dot 2s infinite;
-        }
-        .green .status-dot { background: #10b981; box-shadow: 0 0 8px #10b981; }
-        .red   .status-dot { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
-
-        @keyframes pulse-dot {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50%       { opacity: .7; transform: scale(1.2); }
-        }
-
-        /* Card content */
-        .card-header {
-            display: flex;
-            align-items: center;
-            margin-bottom: 1.25rem;
-        }
-        .room-name {
-            font-size: 1.6rem;
-            font-weight: 800;
-            letter-spacing: .02em;
-            color: #ffffff;
-            line-height: 1.2;
-        }
-
-        .status-label {
-            font-size: 1rem;
-            font-weight: 700;
-            letter-spacing: .08em;
-            text-transform: uppercase;
-            margin-bottom: 1rem;
-        }
-        .green .status-label { color: #a7f3d0; }
-        .red   .status-label { color: #fecaca; }
-
-        /* Percentage */
-        .percentage-wrap {
-            margin-bottom: 1.25rem;
-        }
-        .percentage-value {
-            font-size: 3.5rem;
-            font-weight: 900;
-            line-height: 1;
-            letter-spacing: -.02em;
-        }
-        .green .percentage-value { color: #ffffff; }
-        .red   .percentage-value { color: #ffffff; }
-        .percentage-label {
-            font-size: .9rem;
-            color: #e2e8f0;
-            margin-top: .2rem;
-        }
-
-        /* Progress bar */
-        .progress-bar-bg {
-            background: rgba(255,255,255,.1);
-            border-radius: 8px;
-            height: 12px;
-            margin-bottom: 1.25rem;
-            overflow: hidden;
-        }
-        .progress-bar-fill {
-            height: 100%;
-            border-radius: 8px;
-            transition: width .5s ease;
-        }
-        .green .progress-bar-fill { background: #10b981; }
-        .red   .progress-bar-fill { background: #ef4444; }
-
-        /* Bed details */
-        .bed-details {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: .75rem;
-        }
-        .bed-item {
-            background: rgba(255,255,255,.07);
-            border-radius: 10px;
-            padding: .75rem 1rem;
-        }
-        .bed-item-label {
-            font-size: .75rem;
-            color: #e2e8f0;
-            text-transform: uppercase;
-            letter-spacing: .06em;
-            margin-bottom: .3rem;
-        }
-        .bed-item-value {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: #ffffff;
-        }
-        .bed-item-sub {
-            font-size: .75rem;
-            color: #cbd5e1;
-            margin-top: .1rem;
-        }
-
-        /* Empty state */
-        .empty-state {
-            grid-column: 1 / -1;
-            text-align: center;
-            padding: 4rem 2rem;
-            color: #475569;
-            font-size: 1.25rem;
-        }
-
-        /* Footer */
-        .footer {
-            text-align: center;
-            padding: 1rem 2rem 1.5rem;
-            color: #475569;
-            font-size: .85rem;
-        }
-        .footer a { color: #64748b; text-decoration: none; }
-        .footer a:hover { color: #94a3b8; }
-    </style>
-</head>
-<body>
-
-    <div class="header">
-        <div>
-            <div class="header-title">🏥 <span>Monitor</span> Ketersediaan Bed</div>
-            <a href="{{ route('login') }}" class="login-link">Login Petugas →</a>
-        </div>
-        <div class="header-meta">
-            <span class="clock" id="clock">--:--:--</span>
-            <span>Diperbarui otomatis setiap 30 detik</span>
+<div class="mb-6 grid grid-cols-1 gap-4">
+    <div class="rounded-[28px] border border-border bg-white p-6 shadow-sm sm:p-8">
+        <p class="text-sm font-semibold text-secondary">Pembaruan Sistem</p>
+        <div class="mt-4 flex items-end justify-between gap-6">
+            <div>
+                <p id="clock" class="text-5xl font-bold tracking-tight text-foreground">--:--:--</p>
+                <p class="mt-2 text-sm text-secondary">Waktu lokal monitor</p>
+            </div>
+            <div class="rounded-2xl bg-success/10 px-4 py-3 text-success">
+                <p class="text-xs font-semibold uppercase tracking-wide">Auto Refresh</p>
+                <p class="mt-1 text-sm font-bold">30 detik</p>
+            </div>
         </div>
     </div>
+</div>
 
-    <div class="grid" id="rooms-grid">
-        @forelse ($rooms as $room)
+@if ($rooms->isEmpty())
+    <x-ui.empty-state icon="bed-double" title="Belum ada data ruangan" description="Tambahkan ruangan dari dashboard internal agar monitor publik menampilkan status bed." />
+@else
+    <div id="rooms-grid" class="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+        @foreach ($rooms as $room)
             @php
-                $color    = $room['status_color'];   // 'green' or 'red'
-                $pct      = $room['usage_percentage'];
-                $maleAvail   = $room['male_capacity']   - $room['male_occupied'];
+                $isFull = $room['is_full'];
+                $pct = $room['usage_percentage'];
+                $maleAvail = $room['male_capacity'] - $room['male_occupied'];
                 $femaleAvail = $room['female_capacity'] - $room['female_occupied'];
             @endphp
-            <div class="card {{ $color }}" data-room-id="{{ $room['id'] }}">
-                <div class="card-header">
-                    <span class="status-dot"></span>
-                    <span class="room-name">{{ $room['name'] }}</span>
-                </div>
-
-                <div class="status-label">
-                    {{ $color === 'green' ? 'Tersedia' : 'Penuh' }}
-                </div>
-
-                <div class="percentage-wrap">
-                    <div class="percentage-value">{{ $pct }}%</div>
-                    <div class="percentage-label">Tingkat penggunaan</div>
-                </div>
-
-                <div class="progress-bar-bg">
-                    <div class="progress-bar-fill" style="width: {{ $pct }}%"></div>
-                </div>
-
-                <div class="bed-details">
-                    <div class="bed-item">
-                        <div class="bed-item-label">♂ <br>Laki-laki</div>
-                        <div class="bed-item-value">{{ $maleAvail }}</div>
-                        <div class="bed-item-sub">tersedia / {{ $room['male_capacity'] }}</div>
+            <div data-room-id="{{ $room['id'] }}" class="overflow-hidden rounded-[28px] border {{ $isFull ? 'border-error/20 bg-white' : 'border-success/20 bg-white' }} p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+                <div class="mb-5 flex items-start justify-between gap-4">
+                    <div>
+                        <div class="mb-3 flex items-center gap-2">
+                            <span class="size-3 rounded-full {{ $isFull ? 'bg-error' : 'bg-success' }}"></span>
+                            <x-ui.badge :variant="$isFull ? 'danger' : 'success'">{{ $isFull ? 'Penuh' : 'Tersedia' }}</x-ui.badge>
+                        </div>
+                        <h3 class="text-xl font-bold text-foreground">{{ $room['name'] }}</h3>
                     </div>
-                    <div class="bed-item">
-                        <div class="bed-item-label">♀ <br>Perempuan</div>
-                        <div class="bed-item-value">{{ $femaleAvail }}</div>
-                        <div class="bed-item-sub">tersedia / {{ $room['female_capacity'] }}</div>
+
+                    <div class="rounded-2xl {{ $isFull ? 'bg-error/10 text-error' : 'bg-success/10 text-success' }} px-3 py-2 text-right">
+                        <p class="text-xs font-semibold uppercase tracking-wide">Okupansi</p>
+                        <p class="mt-1 text-lg font-bold">{{ $pct }}%</p>
+                    </div>
+                </div>
+
+                <div class="mb-5 h-3 overflow-hidden rounded-full bg-muted">
+                    <div class="h-full rounded-full {{ $isFull ? 'bg-error' : 'bg-primary' }}" style="width: {{ $pct }}%"></div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="rounded-2xl bg-muted p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Laki-laki</p>
+                        <p class="mt-2 text-2xl font-bold text-foreground">{{ $maleAvail }}</p>
+                        <p class="mt-1 text-xs text-secondary">tersedia dari {{ $room['male_capacity'] }}</p>
+                    </div>
+                    <div class="rounded-2xl bg-muted p-4">
+                        <p class="text-xs font-semibold uppercase tracking-wide text-secondary">Perempuan</p>
+                        <p class="mt-2 text-2xl font-bold text-foreground">{{ $femaleAvail }}</p>
+                        <p class="mt-1 text-xs text-secondary">tersedia dari {{ $room['female_capacity'] }}</p>
                     </div>
                 </div>
             </div>
-        @empty
-            <div class="empty-state">
-                Belum ada data ruangan.
-            </div>
-        @endforelse
+        @endforeach
     </div>
+@endif
+@endsection
 
-    <div class="footer">
-        &copy; {{ date('Y') }} Hospital Bed Monitoring &mdash;
-        <a href="{{ route('login') }}">Login Petugas</a>
-    </div>
+@push('scripts')
+<script>
+    function updateClock() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, '0');
+        const m = String(now.getMinutes()).padStart(2, '0');
+        const s = String(now.getSeconds()).padStart(2, '0');
+        document.getElementById('clock').textContent = `${h}:${m}:${s}`;
+    }
 
-    {{-- Live clock --}}
-    <script>
-        function updateClock() {
-            var now = new Date();
-            var h = String(now.getHours()).padStart(2, '0');
-            var m = String(now.getMinutes()).padStart(2, '0');
-            var s = String(now.getSeconds()).padStart(2, '0');
-            document.getElementById('clock').textContent = h + ':' + m + ':' + s;
+    updateClock();
+    setInterval(updateClock, 1000);
+</script>
+
+<script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const PUSHER_KEY = '{{ config("broadcasting.connections.pusher.key") }}';
+        const PUSHER_CLUSTER = '{{ config("broadcasting.connections.pusher.options.cluster", "mt1") }}';
+        const PUSHER_HOST = '{{ config("broadcasting.connections.pusher.host", "") }}';
+        const PUSHER_PORT = {{ config("broadcasting.connections.pusher.port", 443) }};
+        const PUSHER_SCHEME = '{{ config("broadcasting.connections.pusher.scheme", "https") }}';
+
+        if (!PUSHER_KEY || PUSHER_KEY === 'your-pusher-app-key') {
+            return;
         }
-        updateClock();
-        setInterval(updateClock, 1000);
-    </script>
 
-    {{-- Real-time updates via Pusher / Laravel Echo --}}
-    <script src="https://js.pusher.com/8.2.0/pusher.min.js"></script>
-    <script>
-        var PUSHER_KEY     = '{{ config("broadcasting.connections.pusher.key") }}';
-        var PUSHER_CLUSTER = '{{ config("broadcasting.connections.pusher.options.cluster", "mt1") }}';
-        var PUSHER_HOST    = '{{ config("broadcasting.connections.pusher.host", "") }}';
-        var PUSHER_PORT    = {{ config("broadcasting.connections.pusher.port", 443) }};
-        var PUSHER_SCHEME  = '{{ config("broadcasting.connections.pusher.scheme", "https") }}';
+        const options = { cluster: PUSHER_CLUSTER || 'mt1' };
 
-        if (PUSHER_KEY && PUSHER_KEY !== 'your-pusher-app-key') {
-            var pusherOptions = { cluster: PUSHER_CLUSTER || 'mt1' };
-
-            if (PUSHER_HOST && PUSHER_HOST !== '') {
-                pusherOptions.wsHost            = PUSHER_HOST;
-                pusherOptions.wsPort            = PUSHER_PORT;
-                pusherOptions.wssPort           = PUSHER_PORT;
-                pusherOptions.forceTLS          = PUSHER_SCHEME === 'https';
-                pusherOptions.enabledTransports = ['ws', 'wss'];
-                pusherOptions.disableStats      = true;
-            }
-
-            var pusher     = new Pusher(PUSHER_KEY, pusherOptions);
-            var bedChannel = pusher.subscribe('bed-availability');
-
-            bedChannel.bind('BedAvailabilityUpdated', function (data) {
-                if (!data || !data.rooms) return;
-
-                data.rooms.forEach(function (room) {
-                    var card = document.querySelector('[data-room-id="' + room.id + '"]');
-                    if (!card) return;
-
-                    var totalCap  = room.male_capacity   + room.female_capacity;
-                    var totalOcc  = room.male_occupied    + room.female_occupied;
-                    var pct       = totalCap > 0 ? Math.round((totalOcc / totalCap) * 1000) / 10 : 0;
-                    var isFull    = totalOcc >= totalCap;
-                    var color     = isFull ? 'red' : 'green';
-                    var maleAvail = room.male_capacity   - room.male_occupied;
-                    var femAvail  = room.female_capacity - room.female_occupied;
-
-                    // Update card color class
-                    card.classList.remove('green', 'red');
-                    card.classList.add(color);
-
-                    // Update status label
-                    var statusLabel = card.querySelector('.status-label');
-                    if (statusLabel) statusLabel.textContent = isFull ? 'Penuh' : 'Tersedia';
-
-                    // Update percentage
-                    var pctEl = card.querySelector('.percentage-value');
-                    if (pctEl) pctEl.textContent = pct + '%';
-
-                    // Update progress bar
-                    var bar = card.querySelector('.progress-bar-fill');
-                    if (bar) bar.style.width = pct + '%';
-
-                    // Update bed details
-                    var bedItems = card.querySelectorAll('.bed-item');
-                    if (bedItems[0]) {
-                        bedItems[0].querySelector('.bed-item-value').textContent = maleAvail;
-                        bedItems[0].querySelector('.bed-item-sub').textContent   = 'tersedia / ' + room.male_capacity;
-                    }
-                    if (bedItems[1]) {
-                        bedItems[1].querySelector('.bed-item-value').textContent = femAvail;
-                        bedItems[1].querySelector('.bed-item-sub').textContent   = 'tersedia / ' + room.female_capacity;
-                    }
-                });
-            });
+        if (PUSHER_HOST) {
+            options.wsHost = PUSHER_HOST;
+            options.wsPort = PUSHER_PORT;
+            options.wssPort = PUSHER_PORT;
+            options.forceTLS = PUSHER_SCHEME === 'https';
+            options.enabledTransports = ['ws', 'wss'];
+            options.disableStats = true;
         }
-    </script>
 
-</body>
-</html>
+        const pusher = new Pusher(PUSHER_KEY, options);
+        const channel = pusher.subscribe('bed-availability');
+
+        channel.bind('BedAvailabilityUpdated', () => {
+            window.location.reload();
+        });
+    });
+</script>
+@endpush

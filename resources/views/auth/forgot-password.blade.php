@@ -1,25 +1,24 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Forgot your password? No problem. Just let us know your email address and we will email you a password reset link that will allow you to choose a new one.') }}
+    <div class="mb-8">
+        <x-ui.badge variant="warning">Pemulihan Akses</x-ui.badge>
+        <h2 class="mt-4 text-3xl font-bold text-foreground">Lupa Password</h2>
+        <p class="mt-2 text-sm leading-6 text-secondary">Masukkan email akun dan kami akan mengirimkan tautan reset password.</p>
     </div>
 
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    <x-auth-session-status class="mb-6" :status="session('status')" />
 
-    <form method="POST" action="{{ route('password.email') }}">
+    <form method="POST" action="{{ route('password.email') }}" class="space-y-5">
         @csrf
 
-        <!-- Email Address -->
-        <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autofocus />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+        <x-ui.form-field label="Email" for="email" :error="$errors->first('email')" required>
+            <x-ui.input type="email" id="email" name="email" :value="old('email')" required autofocus />
+        </x-ui.form-field>
 
-        <div class="flex items-center justify-end mt-4">
-            <x-primary-button>
-                {{ __('Email Password Reset Link') }}
-            </x-primary-button>
+        <div class="flex justify-end pt-2">
+            <x-ui.button variant="primary" type="submit">
+                <i data-lucide="send" class="size-4"></i>
+                Kirim Link Reset
+            </x-ui.button>
         </div>
     </form>
 </x-guest-layout>

@@ -1,52 +1,39 @@
 <x-guest-layout>
-    <form method="POST" action="{{ route('register') }}">
+    <div class="mb-8">
+        <x-ui.badge variant="primary">Registrasi</x-ui.badge>
+        <h2 class="mt-4 text-3xl font-bold text-foreground">Buat Akun Baru</h2>
+        <p class="mt-2 text-sm leading-6 text-secondary">Lengkapi data akun petugas dengan struktur form yang sama seperti halaman lain.</p>
+    </div>
+
+    <form method="POST" action="{{ route('register') }}" class="space-y-5">
         @csrf
 
-        <!-- Name -->
-        <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input id="name" class="block mt-1 w-full" type="text" name="name" :value="old('name')" required autofocus autocomplete="name" />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
-        </div>
+        <x-ui.form-field label="Nama" for="name" :error="$errors->first('name')" required>
+            <x-ui.input id="name" name="name" :value="old('name')" autocomplete="name" required autofocus />
+        </x-ui.form-field>
 
-        <!-- Email Address -->
-        <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input id="email" class="block mt-1 w-full" type="email" name="email" :value="old('email')" required autocomplete="username" />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
-        </div>
+        <x-ui.form-field label="Username" for="username" :error="$errors->first('username')" required>
+            <x-ui.input id="username" name="username" :value="old('username')" autocomplete="username" required />
+        </x-ui.form-field>
 
-        <!-- Password -->
-        <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+        <x-ui.form-field label="Email" for="email" :error="$errors->first('email')" required>
+            <x-ui.input type="email" id="email" name="email" :value="old('email')" autocomplete="email" required />
+        </x-ui.form-field>
 
-            <x-text-input id="password" class="block mt-1 w-full"
-                            type="password"
-                            name="password"
-                            required autocomplete="new-password" />
+        <x-ui.form-field label="Password" for="password" :error="$errors->first('password')" required>
+            <x-ui.input type="password" id="password" name="password" autocomplete="new-password" required />
+        </x-ui.form-field>
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
-        </div>
+        <x-ui.form-field label="Konfirmasi Password" for="password_confirmation" :error="$errors->first('password_confirmation')" required>
+            <x-ui.input type="password" id="password_confirmation" name="password_confirmation" autocomplete="new-password" required />
+        </x-ui.form-field>
 
-        <!-- Confirm Password -->
-        <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
-
-            <x-text-input id="password_confirmation" class="block mt-1 w-full"
-                            type="password"
-                            name="password_confirmation" required autocomplete="new-password" />
-
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
-        </div>
-
-        <div class="flex items-center justify-end mt-4">
-            <a class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500" href="{{ route('login') }}">
-                {{ __('Already registered?') }}
-            </a>
-
-            <x-primary-button class="ms-4">
-                {{ __('Register') }}
-            </x-primary-button>
+        <div class="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
+            <a href="{{ route('login') }}" class="text-sm font-semibold text-primary hover:underline">Sudah punya akun?</a>
+            <x-ui.button variant="primary" type="submit">
+                <i data-lucide="user-plus" class="size-4"></i>
+                Daftar
+            </x-ui.button>
         </div>
     </form>
 </x-guest-layout>

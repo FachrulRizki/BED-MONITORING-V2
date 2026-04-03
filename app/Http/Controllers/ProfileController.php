@@ -23,7 +23,8 @@ class ProfileController extends Controller
     public function update(Request $request): RedirectResponse
     {
         $validated = $request->validate([
-            'name'  => 'required|string|max:255',
+            'name' => 'required|string|max:255',
+            'username' => 'required|string|max:255|regex:/^[A-Za-z0-9._-]+$/|unique:users,username,' . auth()->id(),
             'email' => 'required|email|unique:users,email,' . auth()->id(),
         ]);
 

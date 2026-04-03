@@ -1,126 +1,107 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Buat Laporan Amprahan</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f3f4f6; min-height: 100vh; padding: 2rem 1rem; }
-        .container { max-width: 600px; margin: 0 auto; }
-        h1 { font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 1.5rem; }
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
-        .nav-link { font-size: .875rem; color: #4f46e5; text-decoration: none; }
-        .nav-link:hover { text-decoration: underline; }
+@extends('layouts.app')
 
-        .card { background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 1.5rem; }
-        .form-group { margin-bottom: 1.25rem; }
-        label { display: block; font-size: .875rem; font-weight: 600; color: #374151; margin-bottom: .4rem; }
-        input[type="text"], input[type="number"], input[type="time"], input[type="file"], select {
-            width: 100%; padding: .5rem .75rem; border: 1px solid #d1d5db;
-            border-radius: 6px; font-size: .875rem; color: #111827; background: #fff;
-        }
-        input:focus, select:focus { outline: none; border-color: #4f46e5; box-shadow: 0 0 0 2px rgba(79,70,229,.15); }
-        .error { color: #dc2626; font-size: .8rem; margin-top: .3rem; }
-        .hint { color: #6b7280; font-size: .8rem; margin-top: .3rem; }
-        .btn { display: inline-block; padding: .5rem 1.25rem; border-radius: 6px; font-size: .875rem; font-weight: 600; cursor: pointer; border: none; }
-        .btn-primary { background: #4f46e5; color: #fff; }
-        .btn-primary:hover { background: #4338ca; }
-        .btn-secondary { background: #e5e7eb; color: #374151; text-decoration: none; }
-        .btn-secondary:hover { background: #d1d5db; }
-        .form-actions { display: flex; gap: .75rem; margin-top: 1.5rem; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header-bar">
-            <h1>Buat Laporan Amprahan</h1>
-            <a href="{{ route('amprahans.index') }}" class="nav-link">← Kembali</a>
-        </div>
+@section('title', 'Buat Laporan Amprahan')
+@section('page-title', 'Buat Laporan Amprahan')
+@section('page-description', 'Masukkan data shift, pasien, dan dokumentasi gambar dalam pola form yang seragam.')
 
-        <div class="card">
-            <form action="{{ route('amprahans.store') }}" method="POST" enctype="multipart/form-data">
-                @csrf
-
-                <div class="form-group">
-                    <label for="room_id">Nama Ruangan</label>
-                    <select id="room_id" name="room_id" required>
-                        <option value="">-- Pilih Ruangan --</option>
-                        @foreach($rooms as $room)
-                            <option value="{{ $room->id }}" {{ old('room_id') == $room->id ? 'selected' : '' }}>
-                                {{ $room->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('room_id')
-                        <p class="error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="shift">Shift</label>
-                    <select id="shift" name="shift" required>
-                        <option value="">-- Pilih Shift --</option>
-                        <option value="pagi" {{ old('shift') == 'pagi' ? 'selected' : '' }}>Pagi</option>
-                        <option value="sore" {{ old('shift') == 'sore' ? 'selected' : '' }}>Sore</option>
-                        <option value="malam" {{ old('shift') == 'malam' ? 'selected' : '' }}>Malam</option>
-                    </select>
-                    @error('shift')
-                        <p class="error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="report_time">Jam Amprahan</label>
-                    <input type="time" id="report_time" name="report_time"
-                           value="{{ old('report_time') }}" required>
-                    @error('report_time')
-                        <p class="error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="male_patient_count">Jumlah Pasien Pria</label>
-                    <input type="number" id="male_patient_count" name="male_patient_count"
-                           value="{{ old('male_patient_count', 0) }}" min="0" required>
-                    @error('male_patient_count')
-                        <p class="error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="female_patient_count">Jumlah Pasien Wanita</label>
-                    <input type="number" id="female_patient_count" name="female_patient_count"
-                           value="{{ old('female_patient_count', 0) }}" min="0" required>
-                    @error('female_patient_count')
-                        <p class="error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="officer_name">Nama Petugas <span style="font-weight:400;color:#6b7280;">(opsional)</span></label>
-                    <input type="text" id="officer_name" name="officer_name"
-                           value="{{ old('officer_name') }}" placeholder="Nama petugas shift ini">
-                    @error('officer_name')
-                        <p class="error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="form-group">
-                    <label for="image">Gambar <span style="font-weight:400;color:#6b7280;">(opsional)</span></label>
-                    <input type="file" id="image" name="image" accept="image/jpeg,image/png">
-                    <p class="hint">Format: JPG, JPEG, PNG. Maksimal 5 MB.</p>
-                    @error('image')
-                        <p class="error">{{ $message }}</p>
-                    @enderror
-                </div>
-
-                <div class="form-actions">
-                    <button type="submit" class="btn btn-primary">Simpan Laporan</button>
-                    <a href="{{ route('amprahans.index') }}" class="btn btn-secondary">Batal</a>
-                </div>
-            </form>
-        </div>
+@section('content')
+<div class="mb-6 flex justify-start">
+    <div class="flex flex-wrap items-center gap-3">
+        <x-ui.button :href="route('amprahans.index')" variant="secondary">
+            <i data-lucide="arrow-left" class="size-4"></i>
+            Kembali
+        </x-ui.button>
     </div>
-</body>
-</html>
+</div>
+
+<x-ui.card title="Form Laporan" description="Laporan dibuat menjelang pergantian shift, jadi isi petugas shift saat ini dan petugas shift berikutnya.">
+    <form action="{{ route('amprahans.store') }}" method="POST" enctype="multipart/form-data" class="space-y-6">
+        @csrf
+
+        <div class="grid gap-5 md:grid-cols-2">
+            <x-ui.form-field label="Nama Ruangan" for="room_id" :error="$errors->first('room_id')" required>
+                <x-ui.select id="room_id" name="room_id" required>
+                    <option value="">-- Pilih Ruangan --</option>
+                    @foreach ($rooms as $room)
+                        <option value="{{ $room->id }}" @selected(old('room_id') == $room->id)>{{ $room->name }}</option>
+                    @endforeach
+                </x-ui.select>
+            </x-ui.form-field>
+
+            <x-ui.form-field label="Jam Amprahan" for="report_time" :error="$errors->first('report_time')" required>
+                <x-ui.input type="time" id="report_time" name="report_time" :value="old('report_time')" step="60" required />
+            </x-ui.form-field>
+
+            <div class="md:col-span-2 rounded-2xl border border-border bg-card-grey/40 p-5">
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-foreground">Informasi Shift dan Petugas</p>
+                </div>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <x-ui.form-field label="Shift Saat Ini" for="shift" :error="$errors->first('shift')" required>
+                        <x-ui.select id="shift" name="shift" required>
+                            <option value="">-- Pilih Shift Saat Ini --</option>
+                            <option value="pagi" @selected(old('shift') === 'pagi')>Pagi</option>
+                            <option value="sore" @selected(old('shift') === 'sore')>Sore</option>
+                            <option value="malam" @selected(old('shift') === 'malam')>Malam</option>
+                        </x-ui.select>
+                    </x-ui.form-field>
+
+                    <x-ui.form-field label="Shift Berikutnya" for="next_shift" :error="$errors->first('next_shift')" required>
+                        <x-ui.select id="next_shift" name="next_shift" required>
+                            <option value="">-- Pilih Shift Berikutnya --</option>
+                            <option value="pagi" @selected(old('next_shift') === 'pagi')>Pagi</option>
+                            <option value="sore" @selected(old('next_shift') === 'sore')>Sore</option>
+                            <option value="malam" @selected(old('next_shift') === 'malam')>Malam</option>
+                        </x-ui.select>
+                    </x-ui.form-field>
+
+                    <x-ui.form-field label="Petugas Shift Saat Ini" for="officer_name" :error="$errors->first('officer_name')" hint="Isi nama petugas yang sedang bertugas sekarang." required>
+                        <x-ui.input id="officer_name" name="officer_name" :value="old('officer_name')" placeholder="Nama petugas shift saat ini" required />
+                    </x-ui.form-field>
+
+                    <x-ui.form-field label="Petugas Shift Berikutnya" for="next_officer_name" :error="$errors->first('next_officer_name')" hint="Isi nama petugas yang akan menerima shift berikutnya." required>
+                        <x-ui.input id="next_officer_name" name="next_officer_name" :value="old('next_officer_name')" placeholder="Nama petugas shift berikutnya" required />
+                    </x-ui.form-field>
+                </div>
+            </div>
+
+            <div class="md:col-span-2 rounded-2xl border border-border bg-card-grey/40 p-5">
+                <div class="mb-4">
+                    <p class="text-sm font-semibold text-foreground">Jumlah Pasien</p>
+                </div>
+
+                <div class="grid gap-5 md:grid-cols-2">
+                    <x-ui.form-field label="Jumlah Pasien Pria" for="male_patient_count" :error="$errors->first('male_patient_count')" required>
+                        <x-ui.input type="number" id="male_patient_count" name="male_patient_count" :value="old('male_patient_count', 0)" min="0" required />
+                    </x-ui.form-field>
+
+                    <x-ui.form-field label="Jumlah Pasien Wanita" for="female_patient_count" :error="$errors->first('female_patient_count')" required>
+                        <x-ui.input type="number" id="female_patient_count" name="female_patient_count" :value="old('female_patient_count', 0)" min="0" required />
+                    </x-ui.form-field>
+                </div>
+            </div>
+
+            <div class="md:col-span-2">
+                <x-ui.form-field label="Rencana Tindakan" for="action_plan" :error="$errors->first('action_plan')" hint="Opsional. Isi rencana tindak lanjut atau catatan serah terima.">
+                    <x-ui.textarea id="action_plan" name="action_plan" rows="5" placeholder="Contoh: observasi ulang 30 menit sebelum pergantian shift, koordinasi dengan ruangan penerima, siapkan kebutuhan bed tambahan.">{{ old('action_plan') }}</x-ui.textarea>
+                </x-ui.form-field>
+            </div>
+
+            <div class="md:col-span-2">
+                <x-ui.form-field label="Gambar Dokumentasi" for="image" :error="$errors->first('image')" hint="Format JPG, JPEG, PNG. Maksimal 5 MB." required>
+                    <x-ui.input type="file" id="image" name="image" accept="image/jpeg,image/png" required class="file:mr-4 file:rounded-xl file:border-0 file:bg-primary/10 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary" />
+                </x-ui.form-field>
+            </div>
+        </div>
+
+        <div class="flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+            <x-ui.button :href="route('amprahans.index')" variant="secondary">Batal</x-ui.button>
+            <x-ui.button variant="primary" type="submit">
+                <i data-lucide="save" class="size-4"></i>
+                Simpan Laporan
+            </x-ui.button>
+        </div>
+    </form>
+</x-ui.card>
+@endsection

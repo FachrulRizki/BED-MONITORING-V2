@@ -3,14 +3,10 @@
 namespace App\Notifications;
 
 use App\Models\AmprahanReport;
-use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
 use Illuminate\Notifications\Notification;
 
-class NewAmprahanNotification extends Notification implements ShouldBroadcast
+class NewAmprahanNotification extends Notification
 {
-    protected mixed $notifiable = null;
-
     public function __construct(protected AmprahanReport $report)
     {
         $this->report->loadMissing('room');
@@ -18,9 +14,7 @@ class NewAmprahanNotification extends Notification implements ShouldBroadcast
 
     public function via($notifiable): array
     {
-        $this->notifiable = $notifiable;
-
-        return ['database', 'broadcast'];
+        return ['database'];
     }
 
     public function toArray($notifiable): array
@@ -31,10 +25,5 @@ class NewAmprahanNotification extends Notification implements ShouldBroadcast
             'report_id'   => $this->report->id,
             'link'        => route('amprahans.show', $this->report->id),
         ];
-    }
-
-    public function broadcastOn(): PrivateChannel
-    {
-        return new PrivateChannel('notifications.' . $this->notifiable?->id);
     }
 }

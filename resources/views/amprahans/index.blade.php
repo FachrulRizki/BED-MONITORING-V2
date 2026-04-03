@@ -1,101 +1,118 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laporan Amprahan</title>
-    <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: sans-serif; background: #f3f4f6; min-height: 100vh; padding: 2rem 1rem; }
-        .container { max-width: 1100px; margin: 0 auto; }
-        h1 { font-size: 1.5rem; font-weight: 700; color: #111827; margin-bottom: 1.5rem; }
-        .header-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem; }
+@extends('layouts.app')
 
-        .btn { display: inline-block; padding: .5rem 1rem; border-radius: 6px; font-size: .875rem; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
-        .btn-primary { background: #4f46e5; color: #fff; }
-        .btn-primary:hover { background: #4338ca; }
+@section('title', 'Laporan Amprahan')
+@section('page-title', 'Laporan Amprahan')
+@section('page-description', 'Daftar laporan shift dengan tampilan tabel seragam dan mudah dipindai.')
 
-        table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
-        thead { background: #4f46e5; color: #fff; }
-        th { padding: .75rem 1rem; text-align: left; font-size: .875rem; font-weight: 600; }
-        td { padding: .75rem 1rem; font-size: .875rem; color: #374151; border-bottom: 1px solid #e5e7eb; }
-        tr:last-child td { border-bottom: none; }
-        tr:hover td { background: #f9fafb; }
+@section('content')
+<div class="mb-6 flex justify-start">
+    <div class="flex flex-wrap items-center gap-3">
+        <x-ui.button :href="route('amprahans.create')" variant="primary">
+            <i data-lucide="plus" class="size-4"></i>
+            Buat Laporan
+        </x-ui.button>
+    </div>
+</div>
 
-        .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; padding: .75rem 1rem; border-radius: 6px; margin-bottom: 1.25rem; font-size: .875rem; }
-        .empty-state { text-align: center; padding: 3rem; color: #6b7280; }
-        .nav-link { font-size: .875rem; color: #4f46e5; text-decoration: none; }
-        .nav-link:hover { text-decoration: underline; }
-        .pagination { display: flex; gap: .5rem; margin-top: 1.25rem; justify-content: center; }
-        .pagination a, .pagination span { padding: .4rem .75rem; border-radius: 6px; font-size: .875rem; border: 1px solid #d1d5db; text-decoration: none; color: #374151; }
-        .pagination a:hover { background: #f3f4f6; }
-        .pagination .active { background: #4f46e5; color: #fff; border-color: #4f46e5; }
+<x-ui.card title="Filter Laporan" description="Saring daftar dan hasil cetak berdasarkan rentang tanggal pembuatan laporan.">
+    <form method="GET" action="{{ route('amprahans.index') }}" class="grid gap-4 md:grid-cols-[1fr_1fr_auto] lg:grid-cols-[220px_220px_auto_auto] lg:items-end">
+        <x-ui.form-field label="Dari Tanggal" for="date_from">
+            <x-ui.input type="date" id="date_from" name="date_from" :value="$filters['date_from'] ?? ''" />
+        </x-ui.form-field>
 
-        .shift-badge {
-            display: inline-block; padding: .2rem .6rem; border-radius: 4px;
-            font-size: .75rem; font-weight: 600; text-transform: capitalize;
-        }
-        .shift-pagi   { background: #fef9c3; color: #854d0e; }
-        .shift-sore   { background: #ffedd5; color: #9a3412; }
-        .shift-malam  { background: #e0e7ff; color: #3730a3; }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header-bar">
-            <h1>Laporan Amprahan</h1>
-            <div style="display:flex; gap:1rem; align-items:center;">
-                <a href="{{ route('dashboard') }}" class="nav-link">← Dashboard</a>
-                <a href="{{ route('amprahans.create') }}" class="btn btn-primary">+ Buat Laporan</a>
-            </div>
+        <x-ui.form-field label="Sampai Tanggal" for="date_to">
+            <x-ui.input type="date" id="date_to" name="date_to" :value="$filters['date_to'] ?? ''" />
+        </x-ui.form-field>
+
+        <div class="flex flex-wrap gap-3">
+            <x-ui.button variant="primary" type="submit">
+                <i data-lucide="filter" class="size-4"></i>
+                Terapkan
+            </x-ui.button>
+
+            <x-ui.button :href="route('amprahans.index')" variant="secondary">
+                Reset
+            </x-ui.button>
         </div>
 
-        @if(session('success'))
-            <div class="alert-success">{{ session('success') }}</div>
-        @endif
+        <div class="flex flex-wrap gap-3 lg:justify-end">
+            <x-ui.button :href="route('amprahans.print', request()->only(['date_from', 'date_to']))" variant="secondary" target="_blank" rel="noopener">
+                <i data-lucide="printer" class="size-4"></i>
+                Cetak Laporan
+            </x-ui.button>
+        </div>
+    </form>
+</x-ui.card>
 
-        @if($reports->isEmpty())
-            <div class="empty-state">
-                <p>Belum ada laporan amprahan. <a href="{{ route('amprahans.create') }}" class="nav-link">Buat laporan pertama</a>.</p>
-            </div>
-        @else
-            <table>
-                <thead>
+<div class="my-6">
+    @if(($filters['date_from'] ?? null) || ($filters['date_to'] ?? null))
+        <x-ui.alert variant="info" class="mb-0">
+            Menampilkan laporan
+            dari <strong>{{ $filters['date_from'] ?? 'awal data' }}</strong>
+            sampai <strong>{{ $filters['date_to'] ?? 'hari ini' }}</strong>.
+        </x-ui.alert>
+    @endif
+</div>
+
+@if ($reports->isEmpty())
+    <x-ui.empty-state icon="clipboard-x" title="Belum ada laporan amprahan" description="Belum ada laporan yang masuk. Mulai dari membuat laporan pertama untuk shift berjalan.">
+        <x-ui.button :href="route('amprahans.create')" variant="primary">
+            <i data-lucide="plus" class="size-4"></i>
+            Buat Laporan
+        </x-ui.button>
+    </x-ui.empty-state>
+@else
+    <x-ui.card body-class="p-0">
+        <div class="overflow-x-auto">
+            <table class="w-full border-collapse text-left">
+                <thead class="border-b border-border bg-muted/50">
                     <tr>
-                        <th>Ruangan</th>
-                        <th>Shift</th>
-                        <th>Jam Amprahan</th>
-                        <th>Pasien Pria</th>
-                        <th>Pasien Wanita</th>
-                        <th>Nama Petugas</th>
-                        <th>Tanggal</th>
-                        <th>Aksi</th>
+                        <th class="p-4 text-sm font-semibold text-secondary">Ruangan</th>
+                        <th class="p-4 text-sm font-semibold text-secondary">Shift</th>
+                        <th class="p-4 text-sm font-semibold text-secondary">Jam Amprahan</th>
+                        <th class="p-4 text-sm font-semibold text-secondary">Pasien</th>
+                        <th class="p-4 text-sm font-semibold text-secondary">Petugas</th>
+                        <th class="p-4 text-sm font-semibold text-secondary">Dibuat</th>
+                        <th class="p-4 text-right text-sm font-semibold text-secondary">Aksi</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($reports as $report)
-                        <tr>
-                            <td>{{ $report->room->name ?? '-' }}</td>
-                            <td>
-                                <span class="shift-badge shift-{{ $report->shift }}">{{ ucfirst($report->shift) }}</span>
+                    @foreach ($reports as $report)
+                        @php
+                            $shiftVariant = match ($report->shift) {
+                                'pagi' => 'warning',
+                                'sore' => 'primary',
+                                'malam' => 'dark',
+                                default => 'neutral',
+                            };
+                        @endphp
+                        <tr class="border-b border-border last:border-b-0 hover:bg-card-grey/60">
+                            <td class="p-4 font-semibold text-foreground">{{ $report->room->name ?? '-' }}</td>
+                            <td class="p-4">
+                                <div><x-ui.badge :variant="$shiftVariant">{{ ucfirst($report->shift) }}</x-ui.badge></div>
+                                <div class="mt-1 text-xs text-secondary/80">Next: {{ ucfirst($report->next_shift ?: $report->shift) }}</div>
                             </td>
-                            <td>{{ $report->report_time }}</td>
-                            <td>{{ $report->male_patient_count }}</td>
-                            <td>{{ $report->female_patient_count }}</td>
-                            <td>{{ $report->officer_name ?: '-' }}</td>
-                            <td>{{ $report->created_at->format('d/m/Y H:i') }}</td>
-                            <td>
-                                <a href="{{ route('amprahans.show', $report) }}" class="nav-link">Lihat Detail</a>
+                            <td class="p-4 text-sm text-secondary">{{ $report->report_time }}</td>
+                            <td class="p-4 text-sm text-secondary">Pria {{ $report->male_patient_count }} · Wanita {{ $report->female_patient_count }}</td>
+                            <td class="p-4 text-sm text-secondary">
+                                <div>{{ $report->officer_name ?: '-' }}</div>
+                                <div class="mt-1 text-xs text-secondary/80">Next: {{ $report->next_officer_name ?: '-' }}</div>
+                            </td>
+                            <td class="p-4 text-sm text-secondary">{{ $report->created_at->format('d/m/Y H:i') }}</td>
+                            <td class="p-4 text-right">
+                                <x-ui.button :href="route('amprahans.show', $report)" variant="ghost" size="icon" aria-label="Lihat detail laporan">
+                                    <i data-lucide="eye" class="size-4"></i>
+                                </x-ui.button>
                             </td>
                         </tr>
                     @endforeach
                 </tbody>
             </table>
+        </div>
 
-            <div class="pagination">
-                {{ $reports->links() }}
-            </div>
-        @endif
-    </div>
-</body>
-</html>
+        <div class="border-t border-border px-4 py-4">
+            {{ $reports->links() }}
+        </div>
+    </x-ui.card>
+@endif
+@endsection

@@ -19,7 +19,7 @@ class AuthDashboardController extends Controller
             'unread_notifications' => auth()->user()->unreadNotifications()->count(),
         ];
 
-        $recentReports = AmprahanReport::with('room')->latest()->take(5)->get();
+        $recentReports = AmprahanReport::with(['room', 'submittedBy'])->latest()->take(5)->get();
 
         return view('dashboard.index', compact('stats', 'recentReports'));
     }
