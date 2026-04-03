@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Events\BedAvailabilityUpdated;
 use App\Models\Room;
-use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -12,30 +11,47 @@ class BedSyncService
 {
     public function sync(): void
     {
-        if (!config('mjkn.enabled')) {
+        if (!config('aplicare.enabled')) {
             return;
         }
 
         try {
-            $data = Http::withToken(config('mjkn.api_key'))
-                ->get(config('mjkn.base_url') . '/bed-availability')
-                ->throw()
-                ->json();
+            $consid    = config('aplicare.consid');
+            $secretkey = config('aplicare.secretkey');
+            $userkey   = config('aplicare.userkey');
+            $timestamp = now()->timestamp;
 
-            foreach ($data['rooms'] as $apiRoom) {
-                $room = Room::where('name', $apiRoom['room_name'])->first();
+            $signature = hash_hmac('sha256', $consid . '&' . $timestamp, $secretkey);
+
+            $response = Http::withHeaders([
+                'X-cons-id'   => $consid,
+                'X-timestamp' => (string) $timestamp,
+                'X-signature' => $signature,
+                'user_key'    => $userkey,
+            ])->get(config('aplicare.url') . '/antrean/ketersediaan-tempat-tidur')
+              ->throw()
+              ->json();
+
+            $list = $response['response']['list'] ?? [];
+
+            foreach ($list as $item) {
+                $roomName = $item['namaPoli'] ?? $item['namaRuang'] ?? null;
+                if (!$roomName) {
+                    continue;
+                }
+
+                $room = Room::where('name', $roomName)->first();
                 if ($room) {
                     $room->update([
-                        'male_occupied'   => $apiRoom['male_occupied'],
-                        'female_occupied' => $apiRoom['female_occupied'],
-                        'last_synced_at'  => now(),
+                        'male_occupied'  => $item['terisi'] ?? $room->male_occupied,
+                        'last_synced_at' => now(),
                     ]);
                 }
             }
 
-            Broadcast::event(new BedAvailabilityUpdated());
+            event(new BedAvailabilityUpdated());
         } catch (\Exception $e) {
-            Log::error('MJKN sync failed: ' . $e->getMessage());
+            Log::error('Aplicare sync failed: ' . $e->getMessage());
             // Data terakhir dipertahankan, tidak ada rollback
         }
     }
