@@ -109,6 +109,31 @@ PUSHER_PORT=443
 PUSHER_SCHEME=https
 ```
 
+## Cronjob Sync Aplicare
+
+Sinkronisasi bed dibuat agar bisa dipanggil langsung dari cronjob server, tanpa bergantung pada `php artisan schedule:run`.
+
+Command:
+
+```bash
+php artisan bed:sync-mjkn
+```
+
+Contoh cronjob tiap 5 menit:
+
+```bash
+*/5 * * * * cd /path/to/BED-MONITORING-V2 && php artisan bed:sync-mjkn >> /dev/null 2>&1
+```
+
+Catatan:
+
+- Command ini sudah punya proteksi overlap. Jika proses sebelumnya masih berjalan, run berikutnya akan dilewati.
+- Untuk debugging manual tanpa lock:
+
+```bash
+php artisan bed:sync-mjkn --force
+```
+
 ## Testing
 
 Jalankan test:

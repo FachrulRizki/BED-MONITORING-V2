@@ -15,6 +15,8 @@ return [
 
     'url' => env('APLICARE_URL', 'https://new-api.bpjs-kesehatan.go.id/aplicaresws'),
 
+    'kodeppk' => env('APLICARE_KODEPPK', ''),
+
     'consid' => env('APLICARE_CONSID', ''),
 
     'userkey' => env('APLICARE_USERKEY', ''),
@@ -22,4 +24,10 @@ return [
     'secretkey' => env('APLICARE_SECRETKEY', ''),
 
     'sync_interval' => (int) env('APLICARE_SYNC_INTERVAL', 5),
+
+    'read_start' => (int) env('APLICARE_READ_START', 1),
+
+    'read_limit' => (int) env('APLICARE_READ_LIMIT', 100),
+
+    'timeout' => (int) env('APLICARE_TIMEOUT', 20),
 ];
